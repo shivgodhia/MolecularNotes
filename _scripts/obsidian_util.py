@@ -2,8 +2,7 @@ import os
 import re
 import sys
 
-
-LINK_REGEX = "\[\[([\w\s'`\-\+\.&!?,;]+)\]\]"
+LINK_REGEX = "\[\[([\w\s'`\-\+\.&!?,;=\(\)]+)\]\]"
 
 def list_files_in_directory(dir):
     """
@@ -16,12 +15,14 @@ def list_files_in_directory(dir):
     return file_paths
 
 
-def list_files_in_directory_recursive(dir):
+def list_files_in_directory_recursive(dir, exclude_dir="Compiled"):
     """
     Reads all files in the directory and returns a list of the file paths recursively
     """
     file_paths = []
     for root, dirs, files in os.walk(dir):
+        if exclude_dir in root.split(os.sep):  # Skip compiled directory
+            continue
         for f in files:
             if f.endswith(".md"):
                 file_paths.append(os.path.join(root, f))
@@ -62,7 +63,7 @@ def create_authors(vault_path):
     for f in files:
         lines = read_file_lines(os.path.join(dirname, f))
         for line in lines:
-            if "Author:" in line:
+            if line.startswith("Author:"):
                 author_string = line.split(":")[1].strip()
                 for author_tag in re.findall(LINK_REGEX, author_string):
                     # check if author_tag is in Authors/ or in the main folder
@@ -76,7 +77,7 @@ def create_authors(vault_path):
                     else:
                         print(f"Creating new author: {author_tag}")
                         with open(
-                            os.path.join(vault_path, "Authors", author_tag, ".md"),
+                            os.path.join(vault_path, "Authors", author_tag + ".md"),
                             "w"
                         ) as f:
                             f.write(f"Type: #author")
@@ -87,7 +88,7 @@ def create_topics(dirname):
     for f in files:
         lines = read_file_lines(os.path.join(dirname, f))
         for line in lines:
-            if "Topics:" in line:
+            if line.startswith("Topics:"):
                 cat_string = line.split(":")[1].strip()
                 for cat_tag in re.findall(LINK_REGEX, cat_string):
                     # check if cat_tag is in Authors/ or in the main folder
@@ -101,7 +102,7 @@ def create_topics(dirname):
                     else:
                         print(f"Creating new topic: {cat_tag}")
                         with open(
-                        os.path.join(vault_path, "Topics", cat_tag, ".md"),
+                        os.path.join(vault_path, "Topics", cat_tag + ".md"),
                         "w") as f:
                             f.write(f"Type: #topic")
 
@@ -127,7 +128,7 @@ def notes_to_review(vault_path):
     not_linked_to = []
     not_linking = []
 
-    all_files = list_files_in_directory_recursive(vault_path)
+    all_files = list_files_in_directory_recursive(vault_path, "Compiled")
 
     for f in all_files:
         file_contents = read_file(os.path.join(vault_path, f))
